@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrndlyTV Monthly Metrics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a1a2e; }
+
+  header {
+    background: linear-gradient(135deg, #1F3864, #2E75B6);
+    color: white; padding: 24px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 1.8rem; font-weight: 700; }
+  header span { font-size: 0.9rem; opacity: 0.8; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 28px 32px; }
+
+  /* Month filter */
+  .filter-bar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px;
+  }
+  .filter-bar label { font-weight: 600; color: #1F3864; }
+  .filter-bar select {
+    padding: 8px 14px; border-radius: 8px; border: 1.5px solid #2E75B6;
+    font-size: 0.95rem; background: white; color: #1a1a2e; cursor: pointer;
+  }
+
+  /* KPI cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
+  .kpi-card {
+    background: white; border-radius: 12px; padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(30,55,100,0.08);
+    border-top: 4px solid #2E75B6;
+  }
+  .kpi-card.red   { border-top-color: #C00000; }
+  .kpi-card.green { border-top-color: #375623; }
+  .kpi-card.orange { border-top-color: #ED7D31; }
+  .kpi-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #666; margin-bottom: 8px; }
+  .kpi-value { font-size: 2.4rem; font-weight: 800; color: #1F3864; line-height: 1; }
+  .kpi-sub   { font-size: 0.78rem; color: #999; margin-top: 6px; }
+
+  /* Chart grid */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
+  .chart-card {
+    background: white; border-radius: 12px; padding: 24px;
+    box-shadow: 0 2px 12px rgba(30,55,100,0.08);
+  }
+  .chart-card.wide { grid-column: 1 / -1; }
+  .chart-title { font-size: 1rem; font-weight: 700; color: #1F3864; margin-bottom: 18px; }
+
+  /* Table */
+  .table-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
+  .table-card {
+    background: white; border-radius: 12px; padding: 24px;
+    box-shadow: 0 2px 12px rgba(30,55,100,0.08);
+  }
+  .table-card h3 { font-size: 1rem; font-weight: 700; color: #1F3864; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { background: #1F3864; color: white; padding: 9px 12px; text-align: left; }
+  th:last-child, td:last-child { text-align: center; }
+  tr:nth-child(even) td { background: #EBF3FB; }
+  td { padding: 7px 12px; border-bottom: 1px solid #e5e5e5; }
+  tr:hover td { background: #D9E2F3; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 0.78rem; font-weight: 700;
+  }
+  .badge-high { background: #FFE0E0; color: #C00000; }
+  .badge-mid  { background: #FFF0DD; color: #ED7D31; }
+  .badge-low  { background: #E2EFDA; color: #375623; }
+
+  footer { text-align: center; color: #aaa; font-size: 0.8rem; padding: 20px 0 32px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📊 FrndlyTV Monthly Metrics Dashboard</h1>
+    <span>Data source: Jira FTV Project · yupptv.atlassian.net</span>
+  </div>
+  <span id="lastUpdated"></span>
+</header>
+
+<div class="container">
+
+  <!-- Month filter -->
+  <div class="filter-bar">
+    <label for="monthSelect">Viewing month:</label>
+    <select id="monthSelect" onchange="updateDashboard()">
+      <option value="0">January 2026</option>
+      <option value="1" selected>February 2026</option>
+    </select>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Release Days</div>
+      <div class="kpi-value" id="kpi-release">14</div>
+      <div class="kpi-sub" id="kpi-release-sub">Jan 2026</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">FTV Incidents Closed</div>
+      <div class="kpi-value" id="kpi-incidents">69</div>
+      <div class="kpi-sub">FTV · status: Closed</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">FTVUAT Defects Closed</div>
+      <div class="kpi-value" id="kpi-defects">47</div>
+      <div class="kpi-sub">FTVUAT · status: Closed</div>
+    </div>
+  </div>
+
+  <!-- Bar Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">🚨 Incidents by Component</div>
+      <canvas id="incidentChart" height="260"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🐛 Defects by Component</div>
+      <canvas id="defectChart" height="260"></canvas>
+    </div>
+    <div class="chart-card wide">
+      <div class="chart-title">📈 Monthly Trend — Incidents vs Defects</div>
+      <canvas id="trendChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Detail Tables -->
+  <div class="table-grid">
+    <div class="table-card">
+      <h3>🚨 Incidents Detail</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
+        <tbody id="incidentTable"></tbody>
+      </table>
+    </div>
+    <div class="table-card">
+      <h3>🐛 Defects Detail</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
+        <tbody id="defectTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+<div class="section" id="closed-tickets-section" style="margin-top:20px;">
+  <h3 style="font-size:1rem;font-weight:700;color:#1F3864;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1F3864;">
+    📋 All Closed Incidents &amp; Defects
+  </h3>
+  <p style="font-size:0.8rem;color:#888;margin-bottom:12px;">All tickets closed in the selected month. Click to expand each group.</p>
+  <div id="closedTicketsContainer"></div>
+</div>
+
+</div>
+
+<footer>FrndlyTV Metrics Dashboard · Generated by Claude · Data via Jira FTV &amp; FTVUAT Projects</footer>
+
+<script>
+
+const MONTHS_DATA = [
+  {
+    month: 'January 2026',
+    releaseDays: 14,
+    totalIncidents: 69,
+    totalDefects: 47,
+    noComponent: 2,   // remaining after inferred integration
+    incidents: {
+      // Tagged + inferred components combined
+      'All Devices': 9, 'Roku': 27, 'Samsung': 10, 'CMS': 7,
+      'Vizio': 6, 'Web': 4, 'AndroidTV': 2, 'Apple TV': 2,
+      'Fire TV': 1, 'Streaming': 0, 'Backend': 0, 'iOS': 0, 'Android Mobile': 0
+    },
+    defects: {
+      // Tagged + inferred components combined
+      'Roku': 14, 'Fire TV': 12, 'iOS': 7, 'Web': 6,
+      'CMS': 5, 'Apple TV': 3, 'Samsung': 2, 'Vizio': 2,
+      'Android Mobile': 1, 'Streaming': 0, 'Backend': 0, 'AndroidTV': 0
+    }
+  },
+  {
+    month: 'February 2026',
+    releaseDays: '18',
+    totalIncidents: 76,
+    totalDefects: 46,
+    noComponent: 11,  // remaining after inferred integration
+    incidents: {
+      // Tagged + inferred components combined
+      'Roku': 18, 'CMS': 11, 'Web': 8, 'All Devices': 8,
+      'Samsung': 7, 'Fire TV': 6, 'Vizio': 3, 'Streaming': 2,
+      'iOS': 2, 'Android Mobile': 2, 'AndroidTV': 2, 'Backend': 1, 'Apple TV': 0
+    },
+    defects: {
+      // Tagged + inferred components combined
+      'Web': 12, 'Roku': 11, 'Fire TV': 6, 'CMS': 7,
+      'Samsung': 5, 'Android Mobile': 5, 'Apple TV': 1, 'Vizio': 1,
+      'Streaming': 0, 'Backend': 0, 'AndroidTV': 0, 'iOS': 0
+    }
+  }
+];
+
+const COMPONENTS = ['All Devices','Streaming','CMS','Backend','Roku','Fire TV','AndroidTV','Apple TV','Samsung','Vizio','Web','iOS','Android Mobile'];
+const COLORS = ['#4472C4','#2E75B6','#1F3864','#ED7D31','#375623','#C00000','#7030A0','#00B0F0','#FF0000','#92D050','#00B050','#FFC000','#FF7F50'];
+
+let incChart, defChart, trendChart;
+
+function badge(val, total) {
+  const pct = total ? Math.round(val/total*100) : 0;
+  const cls = pct >= 15 ? 'badge-high' : pct >= 5 ? 'badge-mid' : 'badge-low';
+  return `<span class="badge ${cls}">${pct}%</span>`;
+}
+
+function buildTable(tbodyId, data, total) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+  const sorted = Object.entries(data).sort((a,b) => b[1]-a[1]);
+  sorted.forEach(([comp, val]) => {
+    tbody.innerHTML += `<tr><td>${comp}</td><td style="text-align:center;font-weight:600">${val}</td><td style="text-align:center">${badge(val,total)}</td></tr>`;
+  });
+}
+
+function updateDashboard() {
+  const idx = parseInt(document.getElementById('monthSelect').value);
+  const d = MONTHS_DATA[idx];
+
+  document.getElementById('kpi-release').textContent = d.releaseDays;
+  document.getElementById('kpi-release-sub').textContent = d.month;
+  document.getElementById('kpi-incidents').textContent = d.totalIncidents;
+  document.getElementById('kpi-defects').textContent = d.totalDefects;
+
+  const incVals = COMPONENTS.map(c => d.incidents[c] || 0);
+  const defVals = COMPONENTS.map(c => d.defects[c] || 0);
+
+  incChart.data.datasets[0].data = incVals;
+  incChart.update();
+
+  defChart.data.datasets[0].data = defVals;
+  defChart.update();
+
+  buildTable('incidentTable', d.incidents, d.totalIncidents);
+  buildTable('defectTable', d.defects, d.totalDefects);
+
+  // Update closed tickets section
+  buildClosedTickets(idx);
+}
+
+function initCharts() {
+  const d = MONTHS_DATA[0];
+  const incVals = COMPONENTS.map(c => d.incidents[c] || 0);
+  const defVals = COMPONENTS.map(c => d.defects[c] || 0);
+
+  const barOpts = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+      x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+    }
+  };
+
+  incChart = new Chart(document.getElementById('incidentChart'), {
+    type: 'bar',
+    data: {
+      labels: COMPONENTS,
+      datasets: [{ label: 'Incidents', data: incVals, backgroundColor: COLORS, borderRadius: 4 }]
+    },
+    options: barOpts
+  });
+
+  defChart = new Chart(document.getElementById('defectChart'), {
+    type: 'bar',
+    data: {
+      labels: COMPONENTS,
+      datasets: [{ label: 'Defects', data: defVals, backgroundColor: COLORS, borderRadius: 4 }]
+    },
+    options: barOpts
+  });
+
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: MONTHS_DATA.map(m => m.month),
+      datasets: [
+        {
+          label: 'Incidents Closed',
+          data: MONTHS_DATA.map(m => m.totalIncidents),
+          borderColor: '#C00000', backgroundColor: 'rgba(192,0,0,0.08)',
+          tension: 0.3, fill: true, pointRadius: 6, pointHoverRadius: 8
+        },
+        {
+          label: 'Defects Closed',
+          data: MONTHS_DATA.map(m => m.totalDefects),
+          borderColor: '#2E75B6', backgroundColor: 'rgba(46,117,182,0.08)',
+          tension: 0.3, fill: true, pointRadius: 6, pointHoverRadius: 8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  buildTable('incidentTable', d.incidents, d.totalIncidents);
+  buildTable('defectTable', d.defects, d.totalDefects);
+}
+
+
+const CLOSED_TICKETS = {
+  FTV_Jan: [
+    ['FTV-7342', 'All Devices', 'Basic User and No Subscription Users still get future scheduled content being recorded - All Devices - Critical(2)'],
+    ['FTV-8090', 'Amazon FireTV / Amazon FireStick', 'Amazon customer unable to view My Stuff after upgrading- All devices- All users ex: 1252036- Critical (2)'],
+    ['FTV-8166', 'CMS/Admin', 'GeoRuling a VOD asset also Geo Rules all assets of the same Tivo Program ID- all devices- all users- Critical(2)'],
+    ['FTV-8887', 'Vizio', 'Add-on pop up message is showing "undefined"- Vizio- All users (ex: 3324837)- Critical (2)'],
+    ['FTV-8932', 'IOS', 'AirPlay- Tracking bar shows time of day rather than asset progression- Firefox, Chrome on iOS- All users- Major (3)'],
+    ['FTV-9192', 'All Devices', 'Series with seasons and episode numbers, but no program ID are missing season buckets - All Devices - All users - Critical'],
+    ['FTV-9211', 'Android TV', 'User receiving "Decoder init failed" error message at first commercial break when watching On Demand - User ID 3004196 - Android TV - Critical (2)'],
+    ['FTV-9331', 'Roku', 'Holding down arrow button on the remote user are not able to scroll to the bottom of the page- Built in Roku - All Users - Critical(2)'],
+    ['FTV-9544', 'Samsung TV', 'Release Day Incident - Fast-forward/rewind only works with a single press - Samsung 2017 - All Users (ex. 1805734) - Major (3)'],
+    ['FTV-9545', 'Samsung TV', 'Release Day Incident - View More tile cut off on edge of the screen on Networks and Networks A-Z rows - Samsung 2017 - All Users - Major (3)'],
+    ['FTV-9630', 'Samsung TV', 'Release Day Incident - Guide position shifts when scrolling back to previous day - 2017 Samsung - All Users (373760) - Major (3)'],
+    ['FTV-9663', 'CMS/Payment Gateway', 'Braintree customer charged for two subscriptions at roll-to-pay - User ID 893837 - CMS - Critical (2)'],
+    ['FTV-9678', 'Vizio', 'Payment renewal failure on Vizio billed account - User ID: 2883914 - Vizio - Critical (2)'],
+    ['FTV-9683', 'CMS', 'Up next logic incorrect when watching recordings of Hudson and Rex - User ID: 2018778 - All Devices - Critical (2)'],
+    ['FTV-9720', 'Samsung/Vizio', 'Error message, "MediaError is occurred" when watching programming - User ID: 3119041 - Samsung, Vizio - Critical (2'],
+    ['FTV-9780', 'Vizio', 'Add-On Packages not present in Add-On Packs tab in Settings for Vizio billed users - Vizio - User IDs ex: 3232314 - Critical (2)'],
+    ['FTV-9849', 'CMS/Admin', 'Frndly TV subscription turned off before 4th day dunning payment attempt - User ID 3724875 - CMS - Critical (2)'],
+    ['FTV-10023', 'Samsung TV / LG TV', 'Release Day Incident- Tracking bar is flashing when watching a asset from the guide- Samsung(2017)-All Users-Critical(2)'],
+    ['FTV-10041', 'Android TVs', 'Next Movie Logic Differs Depending on Entry Point - User #1849909 - AndroidTV - Critical(2)'],
+    ['FTV-10103', 'Web', 'ION+ has no program information on the Guide - All users - All devices - Critical (2)'],
+    ['FTV-10149', 'Samsung TV / LG TV', 'Infinite buffering when selecting to watch all types of content- Samsung TVs- All Users- Critical (2)'],
+    ['FTV-10187', 'All Devices', 'Closed captions are not synced on MovieSphere Gold - All users (ex ID 3492313) - Multiple devices - Critical (2)'],
+    ['FTV-10198', 'Web/Vizio/Samsung', 'Release Day Incident - Space is missing between episode name and rating - Web, Vizio, Samsung - All Users - Major (3)'],
+    ['FTV-10219', 'All Devices', 'Next Video button leads to a different asset each time after playing from Search - All Users (User ID: 3068480) - All devices - Critical (2)'],
+    ['FTV-10229', 'Web', 'Corrupt content: Hallmark Channel - All users Ex: 3068480 - All devices - Critical (2)'],
+    ['FTV-10242', 'Amazon FireTV / Amazon FireStick', '"You will need an add-on package to watch this program" message is displayed from device search entry point - Roku, Fire TV, VIZIO, Samsung - All Users (Ex: 2727080) - Critical (2)'],
+    ['FTV-10259', 'All Devices', 'Asset With No Upcoming Airings is Displaying "Coming Soon" Tag - All Devices - All Users - Critical (2)'],
+    ['FTV-10262', 'Vizio', 'Release Day Incident – Closed Captions black background misaligned with CC text – Vizio – All users – Major (3)'],
+    ['FTV-10275', 'Roku', 'Focus reverts back to previous rows when scrolling down the Home page - Roku - All Users (Ex: 3384007) - Critical (2)'],
+    ['FTV-10277', 'All Devices', '"Recommended for You" Homescreen Row Not Updated Based on Recent Viewership History - User 3384007 - All Devices - Critical (2)'],
+    ['FTV-10280', 'Samsung TV / LG TV', 'Infinite buffering at first commercial break of all true on-demand - User ID 4391576 - Samsung - Critical (2)'],
+    ['FTV-10293', 'Roku', 'Roku with stable internet connection unable to open Frndly TV app because "it could not be reinstalled from the network" - User ID 4169731 - Roku - Critical'],
+    ['FTV-10297', 'Roku', 'After watching 5-10 seconds into a live or lookback asset, video distorts - Roku - All users ( ex: 1876999, 4405889) - Critical (2)'],
+    ['FTV-10312', 'All Devices', 'Future Airing Assets Not Searchable - All Users -All Devices - Critical(2)'],
+    ['FTV-10316', 'All Devices', 'Order Confirmation email - Monthly Add-on pack renewal, All Users, Critical (2)'],
+    ['FTV-10338', 'Roku', 'Non-customer impacting - KVPs in Reelz VOD ad requests are not correct - Roku - All users (ex: 1876999) - Critical (2)'],
+    ['FTV-10349', 'Web', 'Reactivating canceled black Friday subscription from settings page gets a pop up You Have An Active Black Friday Plan - User #1948623 - Web - Critical(2)'],
+    ['FTV-10353', 'Roku', 'Basic User Upgrade Messaging Distorted When Recording From Player Overlay - All Users - Roku - Critical(2)'],
+    ['FTV-10356', 'CMS/Admin', 'Non-Customer Impacting: Incorrect Director being added to \'Deck the Hallways\' and \'The Christmas Checklist\'- CMS- All Users- Critical(2)'],
+    ['FTV-10360', 'Search Catalog', 'TIVO & GRACENOTE TRACKING: "Chasing Christmas" GAF No Artwork in Postman & Doesn\'t Exist in Gracenote'],
+    ['FTV-10367', 'All Devices', 'Release Day Incident- Searching shell asset does not direct user to the folio page from device level search-All Devices-All Users-Blocker(1)'],
+    ['FTV-10370', 'Roku', 'Release Day Incident - 30 day free trial users are receiving Frndly Tips for you emails with 7 day free trial wording - Roku - All Users - Major (3)'],
+    ['FTV-10378', 'Web', 'Content not loading on Chromebooks - Multiple users - Chromebook/Google Chrome - Critical (2)'],
+    ['FTV-10382', 'Ads', 'Re: Issue with Ads Report for Hallmark Channels'],
+    ['FTV-10383', 'Search Catalogs', 'Multiple watch options of same asset included in Roku Search Catalog - Roku Catalog - All Users - Critical (2)'],
+    ['FTV-10384', 'CMS/Payment Gateway', 'After dunning, Roku customer is charged multiple times - User ID 1020362 - Roku/CMS - Critical (2)'],
+    ['FTV-10386', 'Search Catalog', 'Device Level Search - 12/27/2025 \'Chasing Christmas\' on Great American Family not searchable- Amazon- All Users- Blocker (1)'],
+    ['FTV-10388', 'All Devices', 'Corrupted content: A Boyfriend for Christmas - All users - all devices - Critical'],
+    ['FTV-10389', 'Search Catalog', 'TIVO TRACKING:  WCTH Season 13 Episodes Being Added Incorrectly to Season 12 in Postman'],
+    ['FTV-10390', 'Web', 'At certain resolutions images in carousel block text and Watch 7 Days Free button - Web - All Users - Major (3)'],
+    ['FTV-10393', 'Search Catalog', 'GRACENOTE TRACKING - Lost in Paradise has Incorrect Duration - Major (3)'],
+    ['FTV-10395', 'CMS/Admin', 'Request for Updated Template'],
+    ['FTV-10396', 'CMS/Admin', 'Delete Account Request - Multiple users (12) - CMS - Critical (2)'],
+    ['FTV-10397', 'All Devices', 'Corrupted content, "Christmas Waltz" on the Hallmark Channel - All Users, EX: 12788 - All Devices - Critical (2)'],
+    ['FTV-10398', 'Samsung TV / LG TV', 'Lookback or recording option plays instead of add-on option when user starts watching from moviefolio page - User ID 1786034 - All devices - Critical (2)'],
+    ['FTV-10399', 'All Devices', 'User located in the US receives, "Content not available in your country" message when opening the app - User ID: 4186951 - Roku - Critical (2)'],
+    ['FTV-10400', 'All Devices', 'Alaska State Troopers Shofolio Page Missing All Linear Season 9 Episodes - User 1470105 - All Devices - Critical (2) '],
+    ['FTV-10402', 'All Devices', 'New Classic Monthly Users Prompted to Upgrade to Use Custom Guide - Ex: User #4596809 - Web - Major(3) '],
+    ['FTV-10403', 'All Devices', 'The First 48 Appearing as a Result When Searching for Road Wars - All Users - All devices - Critical(2)'],
+    ['FTV-10404', 'Samsung TV', 'Release Day Incident - App not launching - Samsung 2017 - All users - Critical (2)'],
+    ['FTV-10406', 'Fire TV', '(For Tracking) App crashes after returning from sleep mode - FireTV - All users - Critical (2)'],
+    ['FTV-10408', 'Admin', 'Test Incident '],
+    ['FTV-10409', 'All Devices', 'Users subscribed to both the Black Friday plan and an add-on package are not seeing content under the Black Friday Geo-Rule - Ex 3880488 - All devices - Critical(2)'],
+    ['FTV-10410', 'All Devices', 'Corrupted content: Ladies of the House - All devices - All users (Ex ID 3629673) - Critical (2)'],
+    ['FTV-10411', 'Fire TV', 'After commercial break on MeTVToons user gets a blank screen w/ audio - User ID: 2204232 - Amazon Fire TV - Critical (2)'],
+    ['FTV-10414', 'CDN/Streaming', 'Audio is distorted when watching Pixl live - All Users, EX: 1161087 - All Devices - BLOCKER(1)'],
+    ['FTV-10415', 'All Devices', 'Non-Black Friday Users are not seeing content under the correct geo-rule - ex) 712235 - All Devices - Critical(2)'],
+    ['FTV-10417', 'Roku', 'Device Level Search - 01/17/2026 \'Ainsley McGregor Mysteries: A Case for the Watchmaker\' on Great American Family not searchable- Roku- All Users- Blocker (1)'],
+    ['FTV-10419', 'CMS/Admin', 'Delete Account Request - Multiple users (20) - CMS - Critical (2)'],
+    ['FTV-10421', 'Vizio', 'Release Day Incident - Choose Your Plan page does not display after selecting Watch Free For 7 Days - VIZIO - All Users - Blocker (1)'],
+    ['FTV-10424', 'Vizio', 'Volume is going up and down throughout viewing on any channel watched - User ID: 2549269 - Vizio - Critical (2)'],
+    ['FTV-10425', 'Web', 'Hero content not showing on try.frndlytv.com -  Web - All users - Critical (2)'],
+    ['FTV-10429', 'Web', 'signup.frndlytv.com reflects incorrect Annual Premium Plan breakdown- All Users- Web- Blocker (1)'],
+    ['FTV-10431', 'CMS', 'Delete Account Request - Multiple Users (18) - CMS - Critical (2)'],
+    ['FTV-10432', 'All Devices', 'Corrupt content: Svengoolie, MeTV on 1/24/2026 - All users: ex: 3406815 - All devices - Critical (2)'],
+    ['FTV-10434', 'All Devices', 'Release Day Incident - My Stuff page is taking excessively long to load - All Devices - All Users (Ex ID: 2727080) - Critical(2)'],
+    ['FTV-10443', 'All Devices', 'Release Day Incident - Increased load times when scrolling between rows and accessing certain pages - FireTV, AndroidTV, AppleTV, Samsung,  iOS, Android Mobile - All users (ex: 4627250) - Critical (2)'],
+    ['FTV-10444', 'AppleTV', 'Release Day Incident - Featured Content Row does not have continuous scroll functionality - Apple TV - All Users (Ex ID: 2727080) - Major (3)'],
+    ['FTV-10447', 'All Devices', 'Cannot access watch.frndlytv.com from Frndly TV office- All devices- All users (Ex. 3068480)- Critical (2) ']
+  ],
+  FTV_Feb: [
+    ['FTV-5378', 'Roku ', 'Roku Dependency - Charges not refundable- User #1198106, #1198353 - Roku billing- Critical (2)'],
+    ['FTV-6258', 'CMS/Admin', 'The incorrect payment method on file was used to process payment on 9/6/22 for the subscription - User ID 1779669 - CMS - Critical (2)'],
+    ['FTV-6808', 'CMS/Admin', 'CMS fields populating C3 Setting incorrectly- CMS- all users- Major(3)'],
+    ['FTV-7342', 'All Devices', 'Basic User and No Subscription Users still get future scheduled content being recorded - All Devices - Critical(2)'],
+    ['FTV-8210', 'Roku', 'Failed to load Video (Error Code:-5) message when watching any program - User ID: 2936043 - Roku - Critical (2)'],
+    ['FTV-9368', 'Samsung TV / LG TV', 'App opens to black screen or never finishes loading Home screen - User ID: 773137 - Samsung - Critical (2)'],
+    ['FTV-9542', 'Web', 'Expired recording showing as still recorded - User Ids 704561 and 1367814 - All devices - Critical (2)'],
+    ['FTV-9568', 'Backend', 'Devops indicated data is growing more in Remove Continue watch Application Database table. '],
+    ['FTV-9620', 'Web', 'Release Day Incident - Some users must clear cookies before Add-On tab appears - User examples 3448996, 1876999, 2727080 - Web (Chrome, Firefox)'],
+    ['FTV-9818', 'Web', '"Oops! Something went wrong, please try again" error message when watching recordings - User ID: 1096674 - Fire TV, Chrome - Critical (2)'],
+    ['FTV-9820', 'Amazon FireTV / Amazon FireStick', 'Video does not play beginning of asset after selecting Start Over - Fire TV, Vizio - 11458 - Critical (2)'],
+    ['FTV-9906', 'Web', 'Customer is met with a black screen when trying to access sign in page - User ID: 3955269 - Chrome - Critical (2)'],
+    ['FTV-9952', 'Samsung TV', 'Infinite buffering when opening the app - User ID: 3386079 - Samsung - Critical (2)'],
+    ['FTV-9962', 'Apple TV', 'Live point in Guide is not centered - Apple TV - All Users (ex. 1816728) - Critical (2)'],
+    ['FTV-10000', 'Android (Mobile/Tablet)', 'App goes back to home screen after selecting program from the Guide - User ID 2449445 - Android Pixel tablet - Critical (2)'],
+    ['FTV-10115', 'Web', '"Could not load segments of any quality from any CDN" error message when choosing recording - User ID 2432459 - Samsung - Critical (2)'],
+    ['FTV-10128', 'Samsung TV', '"Failed to load the Widevine DRM license: 400 . - 2003" error message when watching programs - User ID: 3124749 - Samsung - Critical (2)'],
+    ['FTV-10195', 'CMS/Roku', 'Expiration date for previous plan applied to most recent plan - User ID 559261 - CMS/Roku - Critical (2)'],
+    ['FTV-10228', 'Andriod/FireTV', 'Release Day Incident - Hyperlinks in terms of use causes terms frame to close - Android and Fire TV - All Users - Critical (2)'],
+    ['FTV-10238', 'Roku', 'Audio becomes less synced with video over time - User ID 2443734 - Roku - Critical (2)'],
+    ['FTV-10270', 'Samsung TV', 'Release Day Incident- Preview Overlay Action in My Stuff causes overlay to close-Samsung-All Users-Critical(2)'],
+    ['FTV-10279', 'All Devices', 'Stingray Greatest Holiday Hits is Missing Thumbnail Image in CMS Rows - All Devices - All Users - Critical(2)'],
+    ['FTV-10284', 'Vizio', 'Blank screen after first commercial break when watching an episode of Storage Wars - All Users, EX: 4267860 - Vizio - Critical (2)'],
+    ['FTV-10318', 'CMS/Payment', 'Potential customers receiving an, "Invalid email address" when attempting to sign up - All Users - Braintree - BLOCKER (1)'],
+    ['FTV-10336', 'Samsung TV', 'RELEASE DAY INCIDENT - Back to top is displaying in the View more page section - All users - Samsung - Critical(2)'],
+    ['FTV-10348', 'All Devices', 'TIVO TRACKING: "A Christmas Murder Mystery" and "She\'s Making a List" Missing from In-App Search - User 3267563 - All Devices - Major (3)'],
+    ['FTV-10361', 'Non-Roku', 'Release Day Incident - Non-customer Impacting - &lat= present in live and lookback ad request - Non-Roku devices - All users (ex:1876999) - Major (3)'],
+    ['FTV-10376', 'CMS', 'Non-customer Impacting- On the report users First success Transaction state doesn\'t match with CMS- User id #3252171- CMS- Critical (2)'],
+    ['FTV-10387', 'Android TVs', 'User is automatically signed out while watching - User ID 1815986 - Android TV - Critical (2)'],
+    ['FTV-10412', 'Search Catalog', 'TIVO TRACKING: "Ainsley McGregor Mysteries: A Case for the Watchmaker" Missing from In-App Search - User 3267563 - All Devices - Critical (2) '],
+    ['FTV-10414', 'CDN/Streaming', 'Audio is distorted when watching Pixl live - All Users, EX: 1161087 - All Devices - BLOCKER(1)'],
+    ['FTV-10427', 'Web', 'Selecting Change Plan with active promotion should display "You have an active promotion!" popup modal -Web-All Users-Critical(2)'],
+    ['FTV-10437', 'CMS', 'Asset in Vizio Search Feed is not picking up Rating from CMS-Vizio Search Feed-All Users-Critical(2)'],
+    ['FTV-10439', 'All Devices', 'Non-Customer Impacting - We are not seeing any package types outside of \'free\' that are watching FMC - All Devices -All Users - Critical (2)'],
+    ['FTV-10442', 'Android (Mobile/Tablet)', 'Release Day Incident - Title showed up for Genre Carousel below the cards - Android Mobile - All Users - Critical(2)'],
+    ['FTV-10448', 'Web', 'Subtitles cannot be switched on from the player - All users - All web browsers - Critical (2)'],
+    ['FTV-10449', 'Mobile Web', 'Screen recording still works after error code - All Users (ex. 1816728) - Mobile Web Safari - Critical (2)'],
+    ['FTV-10451', 'Amazon FireTV / Amazon FireStick', 'User is able to seek freely through VOD content - FireTV, Android TV - All users - Critical (2)'],
+    ['FTV-10453', 'Samsung TV / LG TV', 'Release Day Incident - User Incorrectly Directed to Shofolio Page 2 - Samsung, Vizio - All Users - Critical(2)'],
+    ['FTV-10454', 'All Devices', 'Western Bound Playing Correct Live Content, but Guide Metadata is not correct - All Users - All Devices - Critical (2)'],
+    ['FTV-10455', 'Fire TV', 'No audio when watching Hallmark Family live - All Users, EX: 4645888 - Fire TV - Critical (2)'],
+    ['FTV-10456', 'All Devices Component', 'When Calls the Heart S1 E11&12, S11 E1&2 show two viewing options on Hallmark+ - All users Ex: 734483 - All Devices - Critical (2)'],
+    ['FTV-10459', 'Web', 'Release Day Incident - Featured Content Row carousel cards repeat when selecting row navigation arrows - Web - All Users (Ex: 2727080) - Critical (2)'],
+    ['FTV-10462', 'Roku', 'When Calls the Heart is airing with audio descriptors when watching live  - All Users, EX: 1046789 - Roku - BLOCKER (1)'],
+    ['FTV-10464', 'All Devices', 'VOD Episodes show an "Available Until" tag on Shofolio, regardless of expiration date - All users - All devices - Critical (2)'],
+    ['FTV-10465', 'Roku', '"Oops!, your Roku didn\'t keep up" Error on Some Hallmark Assets - Roku - All users (ex. 1279501) - Critical (2)'],
+    ['FTV-10466', 'Emails', 'Non-Customer Impacting - Incident Creation/Update Emails Not Being Received - Emails - Critical (2)'],
+    ['FTV-10469', 'CMS', 'Delete Account Request - Multiple users (26) - CMS - Critical (2)'],
+    ['FTV-10472', 'Roku', 'Various error messages appear when selecting Hallmark Family live or Lookback - All users (ex ID 2057977) - All devices (not mobile) - Critical(2)'],
+    ['FTV-10474', 'Web', 'All movies restart after the commercial break on MovieSphere Gold channel- All Users- All Devices- Critical (2)'],
+    ['FTV-10476', 'Samsung TV / LG TV', 'Release Day Incident - Dismiss button does not close the Privacy Policy modal (CA/MD) - Samsung - All Users (Ex: 2727080) - Major (3)'],
+    ['FTV-10478', 'CMS/Admin', 'Release Day Incident - User Details page in CMS takes over 7 seconds to load - CMS - All Users (Ex: 1816728) - Critical(2)'],
+    ['FTV-10479', 'Web', 'Unable to Select Last Genre in Default View Within Browse By Genre Row - All Users - Web - Major(3)'],
+    ['FTV-10481', 'All Devices', 'Release Day Incident - Start Watching button is not displayed on Folio page 1 for all VOD series - All Devices - All Users (Ex: 4689672) - Critical (2)'],
+    ['FTV-10482', 'Amazon FireTV / Amazon FireStick', '\'Continue Watching\' message pops up every 45-60 minutes when watching- User ID EX: 3783581 and 2042518- Amazon Fire and Android TV - Critical (2)'],
+    ['FTV-10483', 'Ads', 'Non-customer impacting - Impressions have stopped serving on Hallmark Live - Roku - All users - Critical (2)'],
+    ['FTV-10485', 'Search Catalogs', 'Device Level Search - 02/14/2026 \'Mary J. Blige Presents Be Happy\' and \'The Way to You\' not searchable- Roku- All Users- Blocker (1)'],
+    ['FTV-10487', 'Web', 'Corrupted content, "Very, Very Valentine" on Hallmark Channel - All Users, EX: 1493643 - Chrome, Firefox browsers - Critical (2)'],
+    ['FTV-10488', 'All Devices', 'Corrupted Content: Because of Cupid, Hallmark - All users - All devices - Critical(2)'],
+    ['FTV-10492', 'Search Catalogs', 'TiVO ViewEvents are not recorded at TiVO - All Devices - All Users - Critical(2)'],
+    ['FTV-10495', 'Roku', 'Pink hue on Hallmark Mystery - Multiple users - Roku - Critical (2)'],
+    ['FTV-10496', 'All Devices', 'Error message when selecting, "Chasing Christmas" on Great American Pure Flix - All Users, EX: 3573014 - All Devices - Critical (2)'],
+    ['FTV-10497', 'CMS/Payment Gateway', 'Black Friday Customers seeing incorrect pricing after rolling to full price subscription - All Roku billed - 4438616 - All Devices - Critical (2)'],
+    ['FTV-10499', 'CDN/Streaming', 'Audio on FETV sporadically drops out when watching live - All Users, EX: 4144038 - All Devices - Critical(2)'],
+    ['FTV-10500', 'Ads', 'Ad requests are no longer being sent on Bounce - All Devices - All users (ex: 1876999) - Critical (2)'],
+    ['FTV-10505', 'Web', 'Sign in screen is not readily displayed upon going to watch.frndlytv.com on all iPhone browsers, sign in is at the bottom of the page - All users ex: 1806417 - iPhone - Critical (2)']
+  ],
+  FTVUAT_Jan: [
+    ['FTVUAT-5372', 'Samsung TV', 'Samsung Bitmovin - VOD TV shows continuously buffer during first commercial break - All Users (ex. 2727080) - Samsung - Blocker(1)'],
+    ['FTVUAT-5490', 'Amazon Fire', 'Kotlin Migration - Focus is not displaying the Add-on-pack when user navigate back - All users - Fire TV - Critical(2)'],
+    ['FTVUAT-5518', 'Amazon Fire', 'Kotlin Migration - Unable to navigate back after purchasing add-on pack - All users - Fire TV - Blocker(1)'],
+    ['FTVUAT-5652', 'Roku', 'Code Reusability Customization(Custom List and Custom Popup) - Record Button Not Updating & Favoriting shows upgrade error - User ID: 268 - Roku - Blocker(1) '],
+    ['FTVUAT-5695', 'CMS', 'Master package enhancement - Search functionality is not displaying correct results - All users - CMS - Blocker(1)'],
+    ['FTVUAT-5710', 'Amazon Fire', 'Kotlin Migration (P1 Changes) – App crashes when clicking Flip Seasons button on More Episodes page – Fire TV – All users – Blocker (1)'],
+    ['FTVUAT-5711', 'Roku', 'Code Reusability - User sees error message or infinite buffering when trying to watch some recordings - Roku - User: 77 - Blocker (1)'],
+    ['FTVUAT-5717', 'Andriod/Fire TV', 'Kotlin Migration - All View More cards are missing - Android TV, Fire TV - User IS: 77 - Blocker (1)'],
+    ['FTVUAT-5721', 'Amazon Fire', 'Preview Overlay Redesign - The ellipses is no longer present on preview overlay and the description is double spaced - Fire TV, Android TV - All users - Major (3)'],
+    ['FTVUAT-5725', 'Amazon Fire', 'Preview Overlay Redesign - The size of the information overlay does not dynamically adjust to the content shown and is missing  - Fire TV, Android TV - All users - Major (3)'],
+    ['FTVUAT-5728', 'ios', 'When user is playing an asset in PIP mode and selects another asset to watch the app crashes - iPad, iOS - All Users - Blocker(1)'],
+    ['FTVUAT-5736', 'Amazon Fire', 'Record Overlay in Player Displays Buttons and Recording Options Over Each Other - All Users - FireTV/AndroidTV - Critical(2)'],
+    ['FTVUAT-5737', 'Amazon Fire', 'App Crash When Selecting Start Watching From Moviefolio - All Users - FireTV, AndroidTV - Blocker(1)'],
+    ['FTVUAT-5746', 'Emails', 'confirmation email for add-on - Series image poster is not matching with the add-on plans - All users #143 - Email - Critical(2)'],
+    ['FTVUAT-5747', 'Samsung TV', 'Bitmovin - Continue watching progress not being recorded - Samsung 2018+- All users (id: 2755348, 2755453) - Blocker (1)'],
+    ['FTVUAT-5748', 'ios', 'Thread Optimization - Full set of cards are not displaying when user refresh the section - All users - IOS - Critical(2)'],
+    ['FTVUAT-5749', 'Amazon Fire', 'Preview Overlay Redesign - Focus is lost after navigating down from the Information icon - Fire TV - All Users (Ex: 2755346) - Critical (2)'],
+    ['FTVUAT-5752', 'Amazon Fire', 'Preview Overlay Redesign- Asset image is present on the recording overlay - Android TV, FireTV - All Users - Major (3)'],
+    ['FTVUAT-5754', 'Amazon Fire', 'Preview Overlay Redesign - Info overlay is moving up from bottom of screen - Android TV, FireTV - All users - Major (3) '],
+    ['FTVUAT-5755', 'Amazon Fire', 'Preview Overlay Redesign - The image on the info overlay is shorter than the show title and details - Fire TV, Android TV - All users - Major (3)'],
+    ['FTVUAT-5764', 'All Devices', 'Email for Add-on Pack Subscription - \'Amount billed now: $7.99/mo\' showed in the email received for add on who availed Free Trial - All Users- Critical(2)'],
+    ['FTVUAT-5765', 'CMS/Billing', 'Bitmovin - "Oops try again." pop up modal does not appear after 30 seconds of buffering - Web - User ID: 77 - Blocker (1)'],
+    ['FTVUAT-5766', 'ios', 'Thread Optimization - Screen is displaying blank for a fraction of seconds when user record or delete record the assets - All users - IOS - Major(3)'],
+    ['FTVUAT-5768', 'ROKU', 'Roku Device Activation Promo - Reduce the size of the Disclaimer under the Premium Plan Card on Choose Your Plan - All Users - Roku - Major(3)'],
+    ['FTVUAT-5769', 'ROKU', 'Roku Device Activation Promo - Reduce the spacing between the two prices on the Premium Plan Card on Choose Your Plan - All Users - Roku - Major(3)'],
+    ['FTVUAT-5770', 'Roku', 'Roku Device Activation Promo - Incorrect Text Display on the Confirm Your Plan "Your Plan" Card  - All Users - Roku - Major(3)'],
+    ['FTVUAT-5771', 'ROKU', 'Roku Device Activation Promo - Incorrect price showing on the Roku Pay Screen - All Users - Roku - Major(3)'],
+    ['FTVUAT-5773', 'ROKU', 'RokuRetailPromo - Promotion Plan Details Incorrect in Settings - User #1624 - Roku - Major(3)'],
+    ['FTVUAT-5774', 'Web', 'Bitmovin - CTA button says "Close Player" rather than "OK" - Web - User ID: 77 - Critical (2)'],
+    ['FTVUAT-5775', 'Web', 'Bitmovin - Text wraps to second line - Web - User ID: 77 - Major (3)'],
+    ['FTVUAT-5777', 'ROKU', 'Roku Device Activation Promo - Terms checkbox and Continue button missing from Confirm Your Plan page in reactivation flow - Roku - User ID: 125) - Critical (2)'],
+    ['FTVUAT-5779', 'Roku', 'Create Crawl Message- Message is not displaying correctly-Roku-All Users-Major(3) '],
+    ['FTVUAT-5781', 'Vizio', 'Create Crawl Message- Message is not displaying correctly-Vizio-All Users-Major(3)'],
+    ['FTVUAT-5782', 'ROKU', 'Roku Device Activation Promo - Plan Details information does not update after turning off auto-renew - Roku - All Users (Ex ID: 125) - Critical (2)'],
+    ['FTVUAT-5784', 'ROKU', 'Roku Device Activation Promo - Subhead on Confirm Your Plan screen not reflecting the correct date - Roku - All Users (Ex ID: 125) - Critical (2)'],
+    ['FTVUAT-5788', 'AppleTV', 'Featured Content Row - Row Does Not Loop When Scrolling - AppleTV- Major(3)'],
+    ['FTVUAT-5790', 'Roku', 'Roku Optimization - User is redirected to "Countdown to Christmas" row after selecting "DOWN" arrow on remote after reaching bottom of home page - Roku - user id: 77 - Critical (2)'],
+    ['FTVUAT-5791', 'CMS', 'Featured Content row -Asset is not getting deactivated when after searching the data - All users - CMS - Critical(2)'],
+    ['FTVUAT-5794', 'Android Mobile', 'Crawl Message - Blank crawl background observed in player when maximised the dock player - All Users - Android Mobile - Critical(2)'],
+    ['FTVUAT-5795', 'Web', ' Web Signin Redesign - FrndlyTV logo is misaligned on the Sign-In page at 1280×720 resolution - All users - Web - Critical(2)'],
+    ['FTVUAT-5796', 'Web', 'FeaturedContentRow - Same call to action text was displaying for all cards even though different text were configured - Web - Blocker (1)'],
+    ['FTVUAT-5797', 'Web', 'FeaturedContentRow - Configured  tag colour was not showing - web - Critical (2)'],
+    ['FTVUAT-5798', 'iPad', 'Web Signin Redesign - Signin Box UI is not displaying as per the Figma screens - All users - I-PAD - Major(3)']
+  ],
+  FTVUAT_Feb: [
+    ['FTVUAT-2982', 'Roku/FireTV', 'Folio Add-On Tags - User Not Directed to Checkout Screen When Selecting \'Get Hallmark Movies Now\' - All Users - Roku, FireTV - Blocker(1)'],
+    ['FTVUAT-3865', 'FireTV/Roku', 'Crime Central - Continue Watching not updating on Folio page 1 - Fire TV, Web and Roku - Critical(2)'],
+    ['FTVUAT-4851', 'ROKU', 'Homepage 72 Hour Lookback Row Displaying Different Assets Upon Selection - All Users - Roku - Blocker(1)'],
+    ['FTVUAT-5135', 'Web', 'Single Channel CA - Incorrect  text on button 2 for Pop-up - CA Users #392 - Web - Major(3)'],
+    ['FTVUAT-5347', 'ROKU', 'Personalized Warm Start Enhancements: Titles Missing From Moviefolio Pages - All Users - Roku - Blocker(1)'],
+    ['FTVUAT-5546', 'Web', 'Hallmark Takedown - Static image displays \'Hallmark Channel\' regardless of which Hallmark channel is selected - Web - All Users (Ex: 122) - Blocker (1)'],
+    ['FTVUAT-5715', 'Amazon Fire', 'Regression - Folio page displays when clicked back from player page for Live content -All Users - FireTV/Android TV - Major(3)'],
+    ['FTVUAT-5730', 'ROKU', 'Code Reusability Optimization - While scrolling down through homepage the rows flicker up then pulls down into place - Roku - All Users - Critical (2)'],
+    ['FTVUAT-5739', 'Android/FireTV', 'Kotlin Migration - Duplicate series tiles in CW row in My Stuff - User ID: 77 - Android TV and Fire TV - Critical (2)'],
+    ['FTVUAT-5760', 'ROKU', 'Code Reusability Optimization - When navigating down the Home page, the focus moves to the tile position from the previous row instead of the first position - Roku - All Users - Critical (2)'],
+    ['FTVUAT-5767', 'All Devices', 'Email for Add-on Pack Subscription - Wrong expiry/free trial ends date(as 01/01/1970)showed in the email received for add on who availed Free Trial at Sign Up- All Users- Critical(2)'],
+    ['FTVUAT-5786', 'Roku', 'Code Reusability Optimization – Movies/TV Menu focus gets stuck on second-to-last section when navigating down – Roku – All users – Critical (2)'],
+    ['FTVUAT-5792', 'Roku', 'Code Reusability Optimization – App crashes when scrolling during Home page load after exiting via Exit pop-up – Roku – All users – Blocker (1)'],
+    ['FTVUAT-5800', 'Android Mobile', 'PrivacyPolicy2026- Existing logged in user id is not getting the popup when launched the app - All Users(Ex userid: 35)- Android Mobile/Android TV- BLOCKER(1)'],
+    ['FTVUAT-5801', 'Android Mobile', 'PrivacyPolicy2026- User getting the Privacy popup again when relaunched the app after Closing the popup - All Users- Android Mobile/Android TV- BLOCKER(1)'],
+    ['FTVUAT-5802', 'Web', 'Web Signin Redesign- Forget Password section can only be accessed by clicking under Forget Password-All Users-Web-Major(3)'],
+    ['FTVUAT-5803', 'Roku', 'Roku Optimization Build - Not all episodes are displaying in season buckets - Roku - User id: 77 - Blocker (1)'],
+    ['FTVUAT-5805', 'All Devices', 'PrivacyPolicy2026 - Pricay pop-up was displaying for users not created in California / Marryland states - All devices - Blocker (1)'],
+    ['FTVUAT-5806', 'All Devices', 'PrivacyPolicy2026- Privacy Policy taking more than 5 seconds to display on HOME page - All Users- All Devices- BLOCKER(1)'],
+    ['FTVUAT-5811', 'Samsung TV', 'PrivacyPolicy2026 - Privacy Policy CMS field not populating on some accounts - CMS - User ID: 234, 923, 1288 - Blocker (1)'],
+    ['FTVUAT-5813', 'Samsung TV', 'Featured Content Row - CTA banner has too much vertical height and is not wide enough - Samsung - All Users - Major (3)'],
+    ['FTVUAT-5814', 'All Devices', 'PrivacyPolicy2026- No Plan user getting the Privacy Popup - All Users(Ex userid: 44)- All Devices- BLOCKER(1)'],
+    ['FTVUAT-5826', 'Web', 'Web Sign In Redesign- User is met with a black screen when signing out- Web-All Users-Critical(2)'],
+    ['FTVUAT-5827', 'Vizio', 'Featured Content Row - After selecting carousel card, focus is lost and user is not taken to folio page - Vizio - Blocker (1)'],
+    ['FTVUAT-5828', 'Amazon Fire', 'Unable to Fast-Forward in Add-On Content or "recording" VOD content - FireTV, AndroidTV, All Users - Blocker(1)'],
+    ['FTVUAT-5830', 'Samsung TV', 'Featured Content Row - Selecting some carousel cards leads to infinite buffering or broken folio page - Samsung - All Users - Blocker (1)'],
+    ['FTVUAT-5831', 'ROKU', 'Featured Content Row - Some tags are missing background color, other tags are missing text - Roku - All Users - Blocker (1)'],
+    ['FTVUAT-5832', 'AppleTV', 'Dynamic Carousel Pagination - section name was displaying on cards back side in view more page - Apple tv - Critical (2)'],
+    ['FTVUAT-5833', 'Amazon Fire', 'PrivacyPolicy2026- Privacy popup displayed for all users without backend build with production pointed client apps - All Users- Android Mobile,Android TV,FireTV- BLOCKER(1)'],
+    ['FTVUAT-5834', 'Web', 'Web Sign In Redesign- Splash Screen image is blank until user refreshes the page-Web-All Users-Critical(2)'],
+    ['FTVUAT-5836', 'Amazon Fire', 'App crashes after completing the QS - All Users - FireTV - Critical (2)'],
+    ['FTVUAT-5839', 'All Devices', '1MonthClassicUpgrade - Unable to watch any content when user upgraded to Claasic offer monthly pack - Blocker (1)'],
+    ['FTVUAT-5840', 'Web', '1MonthClassicUpgrade - wrong plan name was diplsying for classic monthly in change plan screen - critical (2)'],
+    ['FTVUAT-5841', 'Payments', '1MonthClassicUpgrade - Wrong Package/ amount was charged in recurring for 1MonthClassicUpgrade pack - Blocker (1)'],
+    ['FTVUAT-5845', 'Samsung TV', 'Regression - Content is not redirecting to player page when there is new episode tag on the card - Samsung - All users- Critical(2)'],
+    ['FTVUAT-5846', 'Samsung TV', 'Regression - Two background color\'s are displaying for CC functionality - Samsung - All users- Critical(2)'],
+    ['FTVUAT-5849', 'Web', '1MonthClassicUpgrade - On the checkout page we are missing the word first on ($8.99/month)- All Users #1615 - Web - Major(3)'],
+    ['FTVUAT-5852', 'Web', '1MonthClassicUpgrade - Basic monthly user during trial is missing classic card from choose your plan page - Web - All Users - Critical (2)'],
+    ['FTVUAT-5853', 'Web', '1MonthClassicUpgrade - Wrong price was displaying on Upcoming Charges in settings page - Critical (2)'],
+    ['FTVUAT-5855', 'Amazon Fire', 'Privacy Policy P2 Changes - Privacy Policy popup showed when only Terms of Use is accepted - All Users - Android Mobile,Android,FireTV - Critical(2)'],
+    ['FTVUAT-5859', 'Emails', '1MonthClassicUpgrade - Promotional and confirmation email are missing details on bottom and correct font styling - Emails - All users - Major (3) '],
+    ['FTVUAT-5864', 'Emails', 'Privacy Policy Modal P2 - Modals continue to appear even after dismissing modal - Roku - All users ex: 2755348 - Blocker (1)'],
+    ['FTVUAT-5868', 'Samsung TV', 'Samsung 2018+ Bitmovin - User cannot scroll down Viewing Options Drawer when more than 4 options are available - Samsung - All users: 1876999 - Major (3)'],
+    ['FTVUAT-5872', 'All Devices', 'Heartland Channel Launch- No guide data populating past today-All Devices(Geo Rule 1)-All Users-Blocker(1) ']
+  ]
+};
+
+
+function buildClosedTickets(monthIdx) {
+  const monthKey = monthIdx === 0 ? 'Jan' : 'Feb';
+  
+  const groups = [
+    { key: 'FTV_' + monthKey, label: 'FTV Incidents', color: '#C0392B', bg: '#FDEDEC' },
+    { key: 'FTVUAT_' + monthKey, label: 'FTVUAT Defects', color: '#1E8449', bg: '#EAFAF1' }
+  ];
+  
+  const container = document.getElementById('closedTicketsContainer');
+  container.innerHTML = '';
+  
+  groups.forEach(g => {
+    const tickets = CLOSED_TICKETS[g.key] || [];
+    const rows = tickets.map(([key, comp, summary]) =>
+      `<tr>
+        <td style="font-weight:600;white-space:nowrap;color:#1F3864;padding:4px 8px;">${key}</td>
+        <td style="color:#555;padding:4px 8px;font-size:0.8rem;">${comp}</td>
+        <td style="padding:4px 8px;font-size:0.8rem;">${summary}</td>
+      </tr>`
+    ).join('');
+    
+    const details = document.createElement('details');
+    details.style.cssText = 'margin-bottom:10px;';
+    details.innerHTML = `
+      <summary style="cursor:pointer;font-size:0.85rem;color:${g.color};font-weight:600;padding:9px 14px;background:${g.bg};border-radius:6px;border:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+        ${g.label} — Closed ${monthIdx === 0 ? 'January' : 'February'} 2026
+        <span style="margin-left:auto;font-weight:normal;font-size:0.78rem;color:#888;">${tickets.length} tickets · click to expand</span>
+      </summary>
+      <div style="margin-top:8px;overflow-x:auto;max-height:400px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:${g.color};color:white;position:sticky;top:0;z-index:1;">
+              <th style="padding:6px 8px;text-align:left;width:85px;">Key</th>
+              <th style="padding:6px 8px;text-align:left;width:155px;">Component</th>
+              <th style="padding:6px 8px;text-align:left;">Summary</th>
+            </tr>
+          </thead>
+          <tbody style="background:white;">
+            ${rows}
+          </tbody>
+        </table>
+      </div>`;
+    container.appendChild(details);
+  });
+}
+
+
+document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+initCharts();
+updateDashboard();
+</script>
+</body>
+</html>
