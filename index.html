@@ -31,7 +31,7 @@
   }
 
   /* KPI cards */
-  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 18px; margin-bottom: 28px; }
   .kpi-card {
     background: white; border-radius: 12px; padding: 20px 24px;
     box-shadow: 0 2px 12px rgba(30,55,100,0.08);
@@ -46,6 +46,8 @@
 
   /* Chart grid */
   .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
+  .charts-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+  .charts-grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
   .chart-card {
     background: white; border-radius: 12px; padding: 24px;
     box-shadow: 0 2px 12px rgba(30,55,100,0.08);
@@ -55,6 +57,8 @@
 
   /* Table */
   .table-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
+  .table-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 28px; }
+  .table-grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 28px; }
   .table-card {
     background: white; border-radius: 12px; padding: 24px;
     box-shadow: 0 2px 12px rgba(30,55,100,0.08);
@@ -94,8 +98,7 @@
   <div class="filter-bar">
     <label for="monthSelect">Viewing month:</label>
     <select id="monthSelect" onchange="updateDashboard()">
-      <option value="0">January 2026</option>
-      <option value="1" selected>February 2026</option>
+      <!-- Options auto-generated from MONTHS_DATA — no manual editing needed -->
     </select>
   </div>
 
@@ -112,42 +115,75 @@
       <div class="kpi-sub">FTV · status: Closed</div>
     </div>
     <div class="kpi-card green">
-      <div class="kpi-label">FTVUAT Defects Closed</div>
-      <div class="kpi-value" id="kpi-defects">47</div>
-      <div class="kpi-sub">FTVUAT · status: Closed</div>
+      <div class="kpi-label">Production Defects</div>
+      <div class="kpi-value" id="kpi-defects">37</div>
+      <div class="kpi-sub">FTVUAT · excl. Prod Copy</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#7030A0;">
+      <div class="kpi-label">Prod Copy Validated</div>
+      <div class="kpi-value" id="kpi-prodcopy" style="color:#7030A0;">6</div>
+      <div class="kpi-sub">FTVUAT · closed via Prod Copy</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Squad Defects</div>
+      <div class="kpi-value" id="kpi-squad">0</div>
+      <div class="kpi-sub">FTVUAT · Squad environment</div>
     </div>
   </div>
 
-  <!-- Bar Charts -->
-  <div class="charts-grid">
+  <!-- Bar Charts: 2x2 grid -->
+  <div class="charts-grid-2x2">
     <div class="chart-card">
       <div class="chart-title">🚨 Incidents by Component</div>
-      <canvas id="incidentChart" height="260"></canvas>
+      <canvas id="incidentChart" height="220"></canvas>
     </div>
     <div class="chart-card">
-      <div class="chart-title">🐛 Defects by Component</div>
-      <canvas id="defectChart" height="260"></canvas>
+      <div class="chart-title">🏭 Production Defects by Component</div>
+      <canvas id="defectChart" height="220"></canvas>
     </div>
-    <div class="chart-card wide">
-      <div class="chart-title">📈 Monthly Trend — Incidents vs Defects</div>
-      <canvas id="trendChart" height="120"></canvas>
+    <div class="chart-card">
+      <div class="chart-title">🔍 Prod Copy Validated — by Component</div>
+      <canvas id="prodCopyChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🏟️ Squad Environment Defects — by Component</div>
+      <canvas id="squadChart" height="220"></canvas>
     </div>
   </div>
+  <!-- Trend Chart: full width -->
+  <div class="chart-card" style="margin-bottom:28px;">
+    <div class="chart-title">📈 Monthly Trend — Incidents vs Defects vs Prod Copy</div>
+    <canvas id="trendChart" height="90"></canvas>
+  </div>
 
-  <!-- Detail Tables -->
-  <div class="table-grid">
+  <!-- Detail Tables: 2x2 grid -->
+  <div class="table-grid-2x2">
     <div class="table-card">
-      <h3>🚨 Incidents Detail</h3>
+      <h3>🚨 Incidents by Component</h3>
       <table>
         <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
         <tbody id="incidentTable"></tbody>
       </table>
     </div>
     <div class="table-card">
-      <h3>🐛 Defects Detail</h3>
+      <h3>🏭 Production Defects by Component</h3>
       <table>
         <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
         <tbody id="defectTable"></tbody>
+      </table>
+    </div>
+    <div class="table-card">
+      <h3>🔍 Prod Copy by Component</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
+        <tbody id="prodCopyTable"></tbody>
+      </table>
+    </div>
+    <div class="table-card">
+      <h3>🏟️ Squad Environment Defects by Component</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Count</th><th>Share</th></tr></thead>
+        <tbody id="squadTable"></tbody>
       </table>
     </div>
   </div>
@@ -162,13 +198,43 @@
 
 </div>
 
-<footer>FrndlyTV Metrics Dashboard · Data via Jira FTV &amp; FTVUAT Projects</footer>
+<footer>FrndlyTV Metrics Dashboard · Generated by Claude · Data via Jira FTV &amp; FTVUAT Projects</footer>
 
 <script>
 
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║              MONTHLY UPDATE GUIDE — READ BEFORE EDITING             ║
+// ║                                                                      ║
+// ║  To add a NEW MONTH, you only need to update 4 places:              ║
+// ║                                                                      ║
+// ║  1. MONTHS_DATA — add a new { } entry (copy/paste the last one)     ║
+// ║     • key: short label used as ticket array suffix (e.g. 'Mar')     ║
+// ║     • month: display name (e.g. 'March 2026')                       ║
+// ║     • releaseDays, totalIncidents, totalDefects,                     ║
+// ║       productionDefectCount, prodCopyCount — fill in from Jira      ║
+// ║                                                                      ║
+// ║  2. CLOSED_TICKETS — add two arrays:                                 ║
+// ║     FTV_Mar:    [ ['FTV-XXXX','Component','Summary'], ... ]          ║
+// ║     FTVUAT_Mar: [ ['FTVUAT-XXXX','Component','Summary'], ... ]       ║
+// ║                                                                      ║
+// ║  3. PROD_COPY_TICKETS — add one array:                               ║
+// ║     FTVUAT_Mar: [ ['FTVUAT-XXXX','Component','Summary'], ... ]       ║
+// ║     JQL: project = FTVUAT AND status = Closed                        ║
+// ║          AND text ~ '"Prod Copy" OR "Prod-Copy"'                     ║
+// ║                                                                      ║
+// ║  4. SQUAD_TICKETS — add one array:                                   ║
+// ║     FTVUAT_Mar: [ ['FTVUAT-XXXX','Component','Summary'], ... ]       ║
+// ║     JQL: project = FTVUAT AND status = Closed                        ║
+// ║          AND text ~ '"Squad UAT"'                                    ║
+// ║                                                                      ║
+// ║  That's it — charts, tables, dropdown & trend all update auto!       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── STEP 1 OF 3: Add a new entry here each month ─────────────────────────
 const MONTHS_DATA = [
   {
     month: 'January 2026',
+    key: 'Jan',          // must match suffix in CLOSED_TICKETS / PROD_COPY_TICKETS
     releaseDays: 14,
     totalIncidents: 69,
     totalDefects: 47,
@@ -179,15 +245,21 @@ const MONTHS_DATA = [
       'Vizio': 6, 'Web': 4, 'AndroidTV': 2, 'Apple TV': 2,
       'Fire TV': 1, 'Streaming': 0, 'Backend': 0, 'iOS': 0, 'Android Mobile': 0
     },
+    productionDefectCount: 37,
     defects: {
-      // Tagged + inferred components combined
-      'Roku': 14, 'Fire TV': 12, 'iOS': 7, 'Web': 6,
-      'CMS': 5, 'Apple TV': 3, 'Samsung': 2, 'Vizio': 2,
-      'Android Mobile': 1, 'Streaming': 0, 'Backend': 0, 'AndroidTV': 0
+      // Production only (excludes 6 Prod Copy validated tickets)
+      'Fire TV': 11, 'Roku': 10, 'Web': 5, 'iOS': 4,
+      'CMS': 2, 'Backend': 1, 'Vizio': 1, 'Apple TV': 1, 'Android Mobile': 1,
+      'Samsung': 0, 'All Devices': 0, 'Streaming': 0, 'AndroidTV': 0
+    },
+    prodCopyCount: 6,
+    prodCopy: {
+      'Samsung': 2, 'Roku': 2, 'Fire TV': 1, 'CMS': 1
     }
   },
   {
     month: 'February 2026',
+    key: 'Feb',          // must match suffix in CLOSED_TICKETS / PROD_COPY_TICKETS
     releaseDays: '18',
     totalIncidents: 76,
     totalDefects: 46,
@@ -198,11 +270,16 @@ const MONTHS_DATA = [
       'Samsung': 7, 'Fire TV': 6, 'Vizio': 3, 'Streaming': 2,
       'iOS': 2, 'Android Mobile': 2, 'AndroidTV': 2, 'Backend': 1, 'Apple TV': 0
     },
+    productionDefectCount: 30,
     defects: {
-      // Tagged + inferred components combined
-      'Web': 12, 'Roku': 11, 'Fire TV': 6, 'CMS': 7,
-      'Samsung': 5, 'Android Mobile': 5, 'Apple TV': 1, 'Vizio': 1,
-      'Streaming': 0, 'Backend': 0, 'AndroidTV': 0, 'iOS': 0
+      // Production only (excludes 14 Prod Copy validated tickets)
+      'Web': 7, 'Fire TV': 6, 'All Devices': 5, 'Samsung': 3,
+      'Android Mobile': 2, 'Backend': 2, 'Roku': 1, 'Apple TV': 1,
+      'CMS': 0, 'Vizio': 0, 'Streaming': 0, 'AndroidTV': 0, 'iOS': 0
+    },
+    prodCopyCount: 14,
+    prodCopy: {
+      'Roku': 7, 'Samsung': 2, 'All Devices': 1, 'Fire TV': 1, 'Backend': 1, 'Web': 1, 'Vizio': 1
     }
   }
 ];
@@ -210,7 +287,7 @@ const MONTHS_DATA = [
 const COMPONENTS = ['All Devices','Streaming','CMS','Backend','Roku','Fire TV','AndroidTV','Apple TV','Samsung','Vizio','Web','iOS','Android Mobile'];
 const COLORS = ['#4472C4','#2E75B6','#1F3864','#ED7D31','#375623','#C00000','#7030A0','#00B0F0','#FF0000','#92D050','#00B050','#FFC000','#FF7F50'];
 
-let incChart, defChart, trendChart;
+let incChart, defChart, trendChart, prodCopyChart, squadChart;
 
 function badge(val, total) {
   const pct = total ? Math.round(val/total*100) : 0;
@@ -227,6 +304,107 @@ function buildTable(tbodyId, data, total) {
   });
 }
 
+// ── Component normalization ──────────────────────────────────────────────────
+const RAW_COMP_MAP = {
+  'all devices': 'All Devices', 'all devices component': 'All Devices',
+  'roku': 'Roku', 'roku ': 'Roku',
+  'amazon firetv / amazon firestick': 'Fire TV', 'amazon fire': 'Fire TV',
+  'fire tv': 'Fire TV', 'andriod/fire tv': 'Fire TV',
+  'samsung tv': 'Samsung', 'samsung tv / lg tv': 'Samsung', 'samsung/vizio': 'Samsung',
+  'vizio': 'Vizio',
+  'web': 'Web', 'mobile web': 'Web', 'web/vizio/samsung': 'Web',
+  'cms/admin': 'CMS', 'cms/payment gateway': 'CMS', 'cms/billing': 'CMS',
+  'cms/payment': 'CMS', 'cms/roku': 'CMS', 'cms': 'CMS', 'admin': 'CMS',
+  'android tv': 'AndroidTV', 'android tvs': 'AndroidTV',
+  'android/firetv': 'AndroidTV', 'andriod/firetv': 'AndroidTV',
+  'ios': 'iOS', 'ipad': 'iOS',
+  'android (mobile/tablet)': 'Android Mobile', 'android mobile': 'Android Mobile',
+  'appletv': 'Apple TV', 'apple tv': 'Apple TV',
+  'backend': 'Backend', 'payments': 'Backend',
+  'cdn/streaming': 'Streaming', 'streaming': 'Streaming',
+  'firebase/backend': 'Backend',
+};
+
+function normalizeComp(raw) {
+  if (!raw) return null;
+  const key = raw.trim().toLowerCase();
+  if (RAW_COMP_MAP[key] !== undefined) return RAW_COMP_MAP[key];
+  if (key.startsWith('roku')) return 'Roku';
+  if (key.startsWith('samsung')) return 'Samsung';
+  if (key.includes('fire tv') || key.includes('firetv')) return 'Fire TV';
+  if (key.includes('android tv')) return 'AndroidTV';
+  if (key.startsWith('apple')) return 'Apple TV';
+  if (key.startsWith('cms')) return 'CMS';
+  if (key.includes('vizio')) return 'Vizio';
+  if (key.includes('all devices')) return 'All Devices';
+  if (key.startsWith('web')) return 'Web';
+  if (key.includes('android mobile') || key.includes('android (mobile')) return 'Android Mobile';
+  if (key.includes('backend')) return 'Backend';
+  if (key.includes('streaming') || key.includes('cdn')) return 'Streaming';
+  if (key === 'ios' || key === 'ipad') return 'iOS';
+  return null; // skip: ads, emails, search catalog, non-roku, etc.
+}
+
+function computeCounts(tickets) {
+  const counts = {};
+  tickets.forEach(([key, comp]) => {
+    const norm = normalizeComp(comp);
+    if (norm) counts[norm] = (counts[norm] || 0) + 1;
+  });
+  return counts;
+}
+
+// ── Environment detection ────────────────────────────────────────────────────
+// Ticket tuple format: ['key', 'Component', 'Summary', 'Environment']
+// Environment is the 4th field (index 3) — optional, defaults to ''
+// Spaces and case are ignored in all comparisons
+
+function isSquadEnv(env) {
+  if (!env) return false;
+  const e = env.replace(/\s+/g, '').toLowerCase();
+  return e === 'squad' || e === 'allsquads' || e === 'squaduat' || /^squad[1-5]$/.test(e);
+}
+
+function isProdCopyEnv(env) {
+  if (!env) return false;
+  const e = env.replace(/\s+/g, '').toLowerCase();
+  return e === 'prodcopy' || e === 'prod-copy' || e === 'productioncopy';
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+function getMonthCounts(idx) {
+  const mk         = MONTHS_DATA[idx].key;
+  const incTickets = CLOSED_TICKETS['FTV_' + mk]       || [];
+  const allDefects = CLOSED_TICKETS['FTVUAT_' + mk]    || [];
+  const pcTickets  = PROD_COPY_TICKETS['FTVUAT_' + mk] || [];
+  const sqTickets  = SQUAD_TICKETS['FTVUAT_' + mk]     || [];
+
+  // Prod Copy = explicit PROD_COPY_TICKETS list OR environment field matches prod copy
+  const pcKeys     = new Set(pcTickets.map(t => t[0]));
+  const isProdCopy = t => pcKeys.has(t[0]) || isProdCopyEnv(t[3]);
+
+  // Production defects = all FTVUAT minus prod copy
+  const prodDefects = allDefects.filter(t => !isProdCopy(t));
+
+  // Squad defects = explicit SQUAD_TICKETS list OR environment field matches squad variant
+  // Computed from allDefects (not prodDefects) so squad tickets that are also Prod Copy are still counted
+  const sqKeys      = new Set(sqTickets.map(t => t[0]));
+  const squadDefects = allDefects.filter(t => sqKeys.has(t[0]) || isSquadEnv(t[3]));
+
+  // Combined prod copy: explicit list + any env-detected not already in the list
+  const envPcOnly    = allDefects.filter(t => !pcKeys.has(t[0]) && isProdCopyEnv(t[3]));
+  const allPcTickets = [...pcTickets, ...envPcOnly];
+
+  return {
+    incCounts:   computeCounts(incTickets),
+    defCounts:   computeCounts(prodDefects),
+    pcCounts:    computeCounts(allPcTickets),
+    squadCounts: computeCounts(squadDefects),
+    squadTotal:  squadDefects.length
+  };
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 function updateDashboard() {
   const idx = parseInt(document.getElementById('monthSelect').value);
   const d = MONTHS_DATA[idx];
@@ -234,10 +412,13 @@ function updateDashboard() {
   document.getElementById('kpi-release').textContent = d.releaseDays;
   document.getElementById('kpi-release-sub').textContent = d.month;
   document.getElementById('kpi-incidents').textContent = d.totalIncidents;
-  document.getElementById('kpi-defects').textContent = d.totalDefects;
+  document.getElementById('kpi-defects').textContent = d.productionDefectCount;
+  document.getElementById('kpi-prodcopy').textContent = d.prodCopyCount;
 
-  const incVals = COMPONENTS.map(c => d.incidents[c] || 0);
-  const defVals = COMPONENTS.map(c => d.defects[c] || 0);
+  const { incCounts, defCounts, pcCounts, squadCounts, squadTotal } = getMonthCounts(idx);
+
+  const incVals = COMPONENTS.map(c => incCounts[c] || 0);
+  const defVals = COMPONENTS.map(c => defCounts[c] || 0);
 
   incChart.data.datasets[0].data = incVals;
   incChart.update();
@@ -245,17 +426,45 @@ function updateDashboard() {
   defChart.data.datasets[0].data = defVals;
   defChart.update();
 
-  buildTable('incidentTable', d.incidents, d.totalIncidents);
-  buildTable('defectTable', d.defects, d.totalDefects);
+  document.getElementById('kpi-squad').textContent = squadTotal;
+
+  buildTable('incidentTable', incCounts, d.totalIncidents);
+  buildTable('defectTable', defCounts, d.productionDefectCount);
+  buildTable('prodCopyTable', pcCounts, d.prodCopyCount);
+  buildTable('squadTable', squadCounts, squadTotal);
+
+  // Update prod copy chart
+  const pcLabels = Object.keys(pcCounts).filter(k => pcCounts[k] > 0).sort((a,b) => pcCounts[b]-pcCounts[a]);
+  const pcVals   = pcLabels.map(k => pcCounts[k]);
+  const pcColors = ['#7030A0','#9B59B6','#BA8FD0','#D5A8E8','#E8C9F5','#5B2C6F','#A569BD'];
+  prodCopyChart.data.labels = pcLabels;
+  prodCopyChart.data.datasets[0].data = pcVals;
+  prodCopyChart.data.datasets[0].backgroundColor = pcColors.slice(0, pcLabels.length);
+  prodCopyChart.update();
+
+  // Update squad chart
+  const sqLabels = Object.keys(squadCounts).filter(k => squadCounts[k] > 0).sort((a,b) => squadCounts[b]-squadCounts[a]);
+  const sqVals   = sqLabels.map(k => squadCounts[k]);
+  const sqColors = ['#ED7D31','#F4A261','#F7C59F','#FAD7B5','#FDE8D0','#C9570A','#E8944A'];
+  squadChart.data.labels = sqLabels;
+  squadChart.data.datasets[0].data = sqVals;
+  squadChart.data.datasets[0].backgroundColor = sqColors.slice(0, sqLabels.length);
+  squadChart.update();
+
+  // Update trend chart
+  trendChart.data.datasets[3].data = MONTHS_DATA.map((m, i) => getMonthCounts(i).squadTotal);
+  trendChart.update();
 
   // Update closed tickets section
   buildClosedTickets(idx);
 }
 
 function initCharts() {
-  const d = MONTHS_DATA[0];
-  const incVals = COMPONENTS.map(c => d.incidents[c] || 0);
-  const defVals = COMPONENTS.map(c => d.defects[c] || 0);
+  const latestIdx = MONTHS_DATA.length - 1;
+  const d = MONTHS_DATA[latestIdx];
+  const { incCounts, defCounts, pcCounts, squadCounts, squadTotal } = getMonthCounts(latestIdx);
+  const incVals = COMPONENTS.map(c => incCounts[c] || 0);
+  const defVals = COMPONENTS.map(c => defCounts[c] || 0);
 
   const barOpts = {
     responsive: true,
@@ -300,6 +509,18 @@ function initCharts() {
           data: MONTHS_DATA.map(m => m.totalDefects),
           borderColor: '#2E75B6', backgroundColor: 'rgba(46,117,182,0.08)',
           tension: 0.3, fill: true, pointRadius: 6, pointHoverRadius: 8
+        },
+        {
+          label: 'Prod Copy Validated',
+          data: MONTHS_DATA.map(m => m.prodCopyCount),
+          borderColor: '#7030A0', backgroundColor: 'rgba(112,48,160,0.08)',
+          tension: 0.3, fill: true, pointRadius: 6, pointHoverRadius: 8
+        },
+        {
+          label: 'Squad Defects',
+          data: MONTHS_DATA.map((m, i) => getMonthCounts(i).squadTotal),
+          borderColor: '#ED7D31', backgroundColor: 'rgba(237,125,49,0.08)',
+          tension: 0.3, fill: true, pointRadius: 6, pointHoverRadius: 8
         }
       ]
     },
@@ -313,11 +534,109 @@ function initCharts() {
     }
   });
 
-  buildTable('incidentTable', d.incidents, d.totalIncidents);
-  buildTable('defectTable', d.defects, d.totalDefects);
+  const pcLabels = Object.keys(pcCounts).filter(k => pcCounts[k] > 0).sort((a,b) => pcCounts[b]-pcCounts[a]);
+  const pcVals   = pcLabels.map(k => pcCounts[k]);
+  const pcColors = ['#7030A0','#9B59B6','#BA8FD0','#D5A8E8','#E8C9F5','#5B2C6F','#A569BD'];
+
+  prodCopyChart = new Chart(document.getElementById('prodCopyChart'), {
+    type: 'bar',
+    data: {
+      labels: pcLabels,
+      datasets: [{ label: 'Prod Copy Validated', data: pcVals, backgroundColor: pcColors.slice(0, pcLabels.length), borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { footer: (items) => `${items[0].raw} of ${d.prodCopyCount} Prod Copy tickets` } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+      }
+    }
+  });
+
+  const sqLabels = Object.keys(squadCounts).filter(k => squadCounts[k] > 0).sort((a,b) => squadCounts[b]-squadCounts[a]);
+  const sqVals   = sqLabels.map(k => squadCounts[k]);
+  const sqColors = ['#ED7D31','#F4A261','#F7C59F','#FAD7B5','#FDE8D0','#C9570A','#E8944A'];
+
+  squadChart = new Chart(document.getElementById('squadChart'), {
+    type: 'bar',
+    data: {
+      labels: sqLabels,
+      datasets: [{ label: 'Squad Defects', data: sqVals, backgroundColor: sqColors.slice(0, sqLabels.length), borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { footer: (items) => `${items[0].raw} of ${squadTotal} Squad defects` } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+      }
+    }
+  });
+
+  document.getElementById('kpi-squad').textContent = squadTotal;
+
+  buildTable('incidentTable', incCounts, d.totalIncidents);
+  buildTable('defectTable', defCounts, d.productionDefectCount);
+  buildTable('prodCopyTable', pcCounts, d.prodCopyCount);
+  buildTable('squadTable', squadCounts, squadTotal);
 }
 
 
+// ── STEP 3 OF 4: Add new month's Prod Copy FTVUAT tickets here ───────────
+// JQL: project = FTVUAT AND status = Closed AND resolved >= "YYYY-MM-01"
+//      AND resolved <= "YYYY-MM-31" AND text ~ '"Prod Copy" OR "Prod-Copy"' ORDER BY resolved ASC
+// Format: ['FTVUAT-XXXX', 'Component', 'Summary text']
+const PROD_COPY_TICKETS = {
+  FTVUAT_Jan: [
+    ['FTVUAT-5747', 'Samsung', 'Bitmovin - Continue watching progress not being recorded - Samsung 2018+- All users (id: 2755348, 2755453) - Blocker (1)'],
+    ['FTVUAT-5737', 'Fire TV', 'App Crash When Selecting Start Watching From Moviefolio - All Users - FireTV, AndroidTV - Blocker(1)'],
+    ['FTVUAT-5711', 'Roku', 'Code Reusability - User sees error message or infinite buffering when trying to watch some recordings - Roku - User: 77 - Blocker (1)'],
+    ['FTVUAT-5372', 'Samsung', 'Samsung Bitmovin - VOD TV shows continuously buffer during first commercial break - All Users (ex. 2727080) - Samsung - Blocker(1)'],
+    ['FTVUAT-5791', 'CMS', 'Featured Content row -Asset is not getting deactivated when after searching the data - All users - CMS - Critical(2)'],
+    ['FTVUAT-5771', 'Roku', 'Roku Device Activation Promo - Incorrect price showing on the Roku Pay Screen - All Users - Roku - Major(3)']
+  ],
+  FTVUAT_Feb: [
+    ['FTVUAT-5805', 'All Devices', 'PrivacyPolicy2026 - Pricay pop-up was displaying for users not created in California / Marryland states - All devices - Blocker (1)'],
+    ['FTVUAT-5803', 'Roku', 'Roku Optimization Build - Not all episodes are displaying in season buckets - Roku - User id: 77 - Blocker (1)'],
+    ['FTVUAT-5792', 'Roku', 'Code Reusability Optimization \u2013 App crashes when scrolling during Home page load after exiting via Exit pop-up \u2013 Roku \u2013 All users \u2013 Blocker (1)'],
+    ['FTVUAT-5786', 'Roku', 'Code Reusability Optimization \u2013 Movies/TV Menu focus gets stuck on second-to-last section when navigating down \u2013 Roku \u2013 All users \u2013 Critical (2)'],
+    ['FTVUAT-5760', 'Roku', 'Code Reusability Optimization - When navigating down the Home page, the focus moves to the tile position from the previous row instead of the first position - Roku - All Users - Critical (2)'],
+    ['FTVUAT-5730', 'Roku', 'Code Reusability Optimization - While scrolling down through homepage the rows flicker up then pulls down into place - Roku - All Users - Critical (2)'],
+    ['FTVUAT-4851', 'Roku', 'Homepage 72 Hour Lookback Row Displaying Different Assets Upon Selection - All Users - Roku - Blocker(1)'],
+    ['FTVUAT-3865', 'Fire TV', 'Crime Central - Continue Watching not updating on Folio page 1 - Fire TV, Web and Roku - Critical(2)'],
+    ['FTVUAT-5864', 'Backend', 'Privacy Policy Modal P2 - Modals continue to appear even after dismissing modal - Roku - All users ex: 2755348 - Blocker (1)'],
+    ['FTVUAT-5852', 'Web', '1MonthClassicUpgrade - Basic monthly user during trial is missing classic card from choose your plan page - Web - All Users - Critical (2)'],
+    ['FTVUAT-5831', 'Roku', 'Featured Content Row - Some tags are missing background color, other tags are missing text - Roku - All Users - Blocker (1)'],
+    ['FTVUAT-5830', 'Samsung', 'Featured Content Row - Selecting some carousel cards leads to infinite buffering or broken folio page - Samsung - All Users - Blocker (1)'],
+    ['FTVUAT-5827', 'Vizio', 'Featured Content Row - After selecting carousel card, focus is lost and user is not taken to folio page - Vizio - Blocker (1)'],
+    ['FTVUAT-5813', 'Samsung', 'Featured Content Row - CTA banner has too much vertical height and is not wide enough - Samsung - All Users - Major (3)']
+  ]
+};
+
+// ── STEP 4 OF 4: Add new month's Squad UAT FTVUAT tickets here ───────────
+// JQL: project = FTVUAT AND status = Closed AND resolved >= "YYYY-MM-01"
+//      AND resolved <= "YYYY-MM-31" AND text ~ '"Squad UAT"' ORDER BY resolved ASC
+// Format: ['FTVUAT-XXXX', 'Component', 'Summary text']
+const SQUAD_TICKETS = {
+  FTVUAT_Jan: [
+    ['FTVUAT-5765', 'CMS/Billing', 'Bitmovin - "Oops try again." pop up modal does not appear after 30 seconds of buffering - Web - User ID: 77 - Blocker (1)'],
+    ['FTVUAT-5777', 'ROKU', 'Roku Device Activation Promo - Terms checkbox and Continue button missing from Confirm Your Plan page in reactivation flow - Roku - User ID: 125) - Critical (2)'],
+    ['FTVUAT-5782', 'ROKU', 'Roku Device Activation Promo - Plan Details information does not update after turning off auto-renew - Roku - All Users (Ex ID: 125) - Critical (2)']
+  ],
+  FTVUAT_Feb: [
+    ['FTVUAT-4851', 'Roku',         'Homepage 72 Hour Lookback Row Displaying Different Assets Upon Selection - All Users - Roku - Blocker(1)'],
+    ['FTVUAT-5546', 'Web',          'Hallmark Takedown - Static image displays \'Hallmark Channel\' regardless of which Hallmark channel is selected - Web - All Users (Ex: 122) - Blocker (1)'],
+    ['FTVUAT-5739', 'Android/FireTV','Kotlin Migration - Duplicate series tiles in CW row in My Stuff - User ID: 77 - Android TV and Fire TV - Critical (2)'],
+    ['FTVUAT-5802', 'Web',          'Web Signin Redesign- Forget Password section can only be accessed by clicking under Forget Password-All Users-Web-Major(3)'],
+    ['FTVUAT-5813', 'Samsung TV',   'Featured Content Row - CTA banner has too much vertical height and is not wide enough - Samsung - All Users - Major (3)'],
+    ['FTVUAT-5852', 'Web',          '1MonthClassicUpgrade - Basic monthly user during trial is missing classic card from choose your plan page - Web - All Users - Critical (2)'],
+    ['FTVUAT-5859', 'Emails',       '1MonthClassicUpgrade - Promotional and confirmation email are missing details on bottom and correct font styling - Emails - All users - Major (3)']
+  ]
+};
+
+// ── STEP 2 OF 4: Add new month's FTV and FTVUAT ticket arrays here ───────
+// Format: ['FTV-XXXX', 'Component', 'Summary text']
 const CLOSED_TICKETS = {
   FTV_Jan: [
     ['FTV-7342', 'All Devices', 'Basic User and No Subscription Users still get future scheduled content being recorded - All Devices - Critical(2)'],
@@ -563,18 +882,21 @@ const CLOSED_TICKETS = {
 
 
 function buildClosedTickets(monthIdx) {
-  const monthKey = monthIdx === 0 ? 'Jan' : 'Feb';
-  
+  const monthKey   = MONTHS_DATA[monthIdx].key;    // auto from MONTHS_DATA
+  const monthLabel = MONTHS_DATA[monthIdx].month;  // e.g. "March 2026"
+
   const groups = [
-    { key: 'FTV_' + monthKey, label: 'FTV Incidents', color: '#C0392B', bg: '#FDEDEC' },
-    { key: 'FTVUAT_' + monthKey, label: 'FTVUAT Defects', color: '#1E8449', bg: '#EAFAF1' }
+    { key: 'FTV_' + monthKey,    label: 'FTV Incidents',                   color: '#C0392B', bg: '#FDEDEC', src: CLOSED_TICKETS },
+    { key: 'FTVUAT_' + monthKey, label: 'FTVUAT Defects',                  color: '#1E8449', bg: '#EAFAF1', src: CLOSED_TICKETS },
+    { key: 'FTVUAT_' + monthKey, label: '🔍 Prod Copy Validated Defects',  color: '#7030A0', bg: '#F5EEF8', src: PROD_COPY_TICKETS },
+    { key: 'FTVUAT_' + monthKey, label: '🏟️ Squad UAT Defects',            color: '#ED7D31', bg: '#FEF3EC', src: SQUAD_TICKETS }
   ];
-  
+
   const container = document.getElementById('closedTicketsContainer');
   container.innerHTML = '';
-  
+
   groups.forEach(g => {
-    const tickets = CLOSED_TICKETS[g.key] || [];
+    const tickets = g.src[g.key] || [];
     const rows = tickets.map(([key, comp, summary]) =>
       `<tr>
         <td style="font-weight:600;white-space:nowrap;color:#1F3864;padding:4px 8px;">${key}</td>
@@ -582,12 +904,12 @@ function buildClosedTickets(monthIdx) {
         <td style="padding:4px 8px;font-size:0.8rem;">${summary}</td>
       </tr>`
     ).join('');
-    
+
     const details = document.createElement('details');
     details.style.cssText = 'margin-bottom:10px;';
     details.innerHTML = `
       <summary style="cursor:pointer;font-size:0.85rem;color:${g.color};font-weight:600;padding:9px 14px;background:${g.bg};border-radius:6px;border:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
-        ${g.label} — Closed ${monthIdx === 0 ? 'January' : 'February'} 2026
+        ${g.label} — ${monthLabel}
         <span style="margin-left:auto;font-weight:normal;font-size:0.78rem;color:#888;">${tickets.length} tickets · click to expand</span>
       </summary>
       <div style="margin-top:8px;overflow-x:auto;max-height:400px;overflow-y:auto;">
@@ -608,6 +930,18 @@ function buildClosedTickets(monthIdx) {
   });
 }
 
+
+// Auto-build month dropdown from MONTHS_DATA — no manual editing needed
+(function() {
+  const sel = document.getElementById('monthSelect');
+  MONTHS_DATA.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = m.month;
+    if (i === MONTHS_DATA.length - 1) opt.selected = true; // default to newest month
+    sel.appendChild(opt);
+  });
+})();
 
 document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
 initCharts();
